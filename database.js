@@ -20,7 +20,7 @@ let createProductsTable = `CREATE TABLE IF NOT EXISTS
     products (
         name text, 
         quantity integer, 
-        category_id integer, 
+        category_id integer NOT NULL, 
         price real,
         FOREIGN KEY (category_id)
             REFERENCES categories (oid)
