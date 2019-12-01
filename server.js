@@ -112,7 +112,57 @@ app.post('/api/store/customer/:id/order', (req, res) => {
     })
 })
 
+//Add items to pending order for customer ID 
+app.post('/api/store/order/:o_id/product/:p_id', (req, res) => {
+    let orderID = parseInt(req.params.o_id)
+    let prodcutID = parseInt(req.params.p_id)
+    let quantity = parseInt(req.body.quantity)
+    let discount = parseInt(req.body.discount)
+    let getStatus = `SELECT status FROM orders WHERE oid = ?`
+    let addProductToOrder = `INSERT INTO order_items values (?,?,?,?,?)`
+    let getCurrentPrice = `SELECT price FROM products WHERE oid = ?`
+    
+    db.get(getStatus, [orderID], (err, result) => {
+        if(err){
+            console.log(`Coulnd't get status for order ${orderID}`, err)
+            res.sendStatus(500)
+        }else if(result.status != "Pending"){
+            console.log(`Can't add to non pending order, please create new order`)
+            res.sendStatus(500)
+        }else{
+            db.get(getCurrentPrice, [prodcutID], (err, result) => {
+                if(err){
+                    console.log(`Couldn't get current price`, err)
+                    res.sendStatus(500)
+                }else{
+                    db.run(addProductToOrder, [orderID, prodcutID, quantity, result.price, discount], err => {
+                        if(err){
+                            console.log(`Couldn't add product to order`, err)
+                            res.sendStatus(500)
+                        }else{
+                            res.sendStatus(200)
+                        }
+                    })
+                }
+            })
+        }
+    })
+})
 
+//Update an order to shipped status 
+app.put('/api/store/order/:id/shipped', (req, res) => {
+    let date = Date(Date.now())
+    let orderID = req.params.id
+    let updateOrderShipped = `UPDATE orders SET status = 'Shipped', shipped_date = ? WHERE oid = ?`
+    db.run(updateOrderShipped, [date, orderID], err => {
+        if(err){
+            console.log(`Couldn't update order ${orderID} to shipped`)
+            res.sendStatus(500)
+        }else{
+            res.sendStatus(200)
+        }
+    })
+})
 
 app.listen(PORT, ()=> {
     console.log(`App listening on port ${PORT}`)
