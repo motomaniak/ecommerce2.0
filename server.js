@@ -51,7 +51,7 @@ app.get('/api/store/customer/:id/orders', (req, res) => {
             console.log(`Couldn't get orders for customer with id ${customerID}`, err)
             res.sendStatus(500)
         }else{
-            res.json(result)
+            res.status(200).json(result)
         }
     })
 })
@@ -149,11 +149,57 @@ app.post('/api/store/order/:o_id/product/:p_id', (req, res) => {
     })
 })
 
+//Delete a product from an order 
+app.delete('/api/store/order/:o_id/product/:p_id', (req, res) => {
+    let orderID = parseInt(req.params.o_id)
+    let prodcutID = parseInt(req.params.p_id)
+    let getStatus = `SELECT status FROM orders WHERE oid = ?`
+    let deleteItemOrder =`DELETE FROM order_items WHERE order_id = ? AND product_id = ?`
+    db.get(getStatus, [orderID], (err, result) => {
+        if(err){
+            console.log(`Coulnd't get status for order ${orderID}`, err)
+            res.sendStatus(500)
+        }else if(result.status != "Pending"){
+            console.log(`Can't remove from non pending order, please submit return request`)
+            res.sendStatus(500)
+        }else{
+            db.run(deleteItemOrder, [orderID, prodcutID], err => {
+                if(err){
+                    console.log(`Couldn't remove product from order`, err)
+                    res.sendStatus(500)
+                }else{
+                    res.sendStatus(200)
+                }
+            })
+        }
+    })
+})
+
+//Update quantity of product for an order
+app.put('/api/store/order/:o_id/product/:p_id', (req, res) => {
+    let orderID = parseInt(req.params.o_id)
+    let prodcutID = parseInt(req.params.p_id)
+    let quantity = parseInt(req.body.quantity)
+    let updateProductQuantity = `UPDATE order_items SET quantity = ? WHERE order_id = ? AND product_id = ?`
+    db.run(updateProductQuantity, [quantity, orderID, prodcutID], err => {
+        if(err){
+            console.log(`Couldn't update quantity`)
+            res.sendStatus(500)
+        }else{
+            res.sendStatus(200)
+        }
+    })
+})
+
 //Update an order to shipped status 
-app.put('/api/store/order/:id/shipped', (req, res) => {
-    let date = Date(Date.now())
+app.put('/api/store/order/:id', (req, res) => {
     let orderID = req.params.id
-    let updateOrderShipped = `UPDATE orders SET status = 'Shipped', shipped_date = ? WHERE oid = ?`
+    let status = req.body.status
+    let date = null
+    if(status == 'Shipped')
+        date = Date(Date.now())
+    
+    let updateOrderShipped = `UPDATE orders SET status = ?, shipped_date = ? WHERE oid = ?`
     db.run(updateOrderShipped, [date, orderID], err => {
         if(err){
             console.log(`Couldn't update order ${orderID} to shipped`)

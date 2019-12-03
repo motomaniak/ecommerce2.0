@@ -21,19 +21,14 @@ let createProductsTable = `CREATE TABLE IF NOT EXISTS
         name text, 
         quantity integer, 
         category_id integer NOT NULL, 
-        price real,
-        FOREIGN KEY (category_id)
-            REFERENCES categories (oid)
-
+        price real
     )`
 let createOrdersTable = `CREATE TABLE IF NOT EXISTS 
     orders (
         customer_id integer,
         status text,
         order_date text,
-        shipped_date text,
-        FOREIGN KEY (customer_id)
-            REFERENCES customers (oid)
+        shipped_date text
     )`
 let createOrdersItemsTable = `CREATE TABLE IF NOT EXISTS 
     order_items (
@@ -41,12 +36,8 @@ let createOrdersItemsTable = `CREATE TABLE IF NOT EXISTS
         order_id integer NOT NULL,
         quantity integer,
         list_price real, 
-        discount integer
-            CHECK (0 <= discount <= 100),
-        FOREIGN KEY (product_id) 
-            REFERENCES products (oid),
-        FOREIGN KEY (order_id) 
-            REFERENCES orders (oid)
+        discount real
+            CHECK (0 <= discount <= 1)
     )`
     
 ;[createCustomersTable, createCategoriesTable, createProductsTable, createOrdersTable, createOrdersItemsTable].forEach(table => {
