@@ -11,18 +11,6 @@ app.get('/', function(req, res){
     res.send(`Visit /api/store to see a list of products available`)
 })
 
-//Get a list of all products in the store
-app.get('/api/store', (req, res) => {
-    let getAllProducts = "SELECT * FROM products"
-    db.all(getAllProducts, (err, result) => {
-        if(err){
-            console.log(`Somehing happened getting the list of produts`, err)
-            res.sendStatus(500)
-        }
-        res.status(200).json(result)
-    })
-})
-
 //Get customer information
 app.get('/api/store/customer/:id', (req, res) => {
     let customerID = req.params.id
@@ -39,7 +27,6 @@ app.get('/api/store/customer/:id', (req, res) => {
 
 //Update a customers information 
 app.put('/api/store/customer/:id', (req,res) => {
-    // get book id from url params (`req.params`)
     let customerID = parseInt(req.params.id)
 
     let queryHelper = Object.keys(req.body).map(ele => `${ele.toUpperCase()} = ?`)
@@ -59,6 +46,37 @@ app.put('/api/store/customer/:id', (req,res) => {
         }
     })
 });
+
+//Delete customer and all associated information so there isn't any orphan data
+app.delete('/api/store/customer/:id', (req, res) => {
+    let customerID = req.params.id
+    let deleteOrderItems = `DELETE FROM order_items WHERE order_id IN (SELECT orders.oid FROM orders JOIN customers ON orders.customer_id = customers.oid WHERE customers.oid = ?)`
+    let deleteOrders = `DELETE FROM orders WHERE orders.customer_id IN (SELECT orders.customer_id FROM orders JOIN customers ON orders.customer_id = customers.oid WHERE customers.oid = ?)`
+    let deleteCustomer = `DELETE FROM customers WHERE oid = ?`
+    db.run(deleteOrderItems, [customerID], err => {
+        if(err){
+            console.log(`Couldn't delete customers order items`, err)
+            res.sendStatus(500)
+        }else{
+            db.run(deleteOrders, [customerID], err => {
+                if(err){
+                    console.log(`Couldn't delete customers orders`, err)
+                    res.sendStatus(500)
+                }else{
+                    db.run(deleteCustomer, [customerID], err => {
+                        if(err){
+                            console.log(`Couldn't delete customer`, err)
+                            res.sendStatus(500)
+                        }else{
+                            console.log(`Deleting customer and all information successful`)
+                            res.sendStatus(200)
+                        }
+                    })
+                }
+            })
+        }
+    }) 
+})
 
 //Add a new customer
 app.post('/api/store/customer', (req, res) => {
@@ -90,18 +108,11 @@ app.get('/api/store/customer/:id/orders', (req, res) => {
         orders.rowid, 
         orders.status, 
         orders.order_date, 
-        orders.shipped_date,
-        order_items.quantity,
-        order_items.list_price,
-        products.name
+        orders.shipped_date
     FROM 
         orders 
     JOIN 
         customers on orders.customer_id = customers.oid 
-    JOIN 
-        order_items on orders.oid = order_items.order_id
-    JOIN 
-        products on products.oid = order_items.oid
     WHERE 
         customers.oid = ?`
     db.all(getCustomerOders, [customerID], (err, result) => {
@@ -128,8 +139,65 @@ app.post('/api/store/categories', (req, res) => {
     })
 })
 
+//Delete Category
+app.delete('/api/store/category/:id', (req, res) => {
+    let categoryID = req.params.id
+    let deleteCategory = `DELETE from categories WHERE oid = ?`
+    db.run(deleteCategory, [categoryID], err => {
+        if(err){
+            console.log(`Couldn't delete category`, err)
+            res.sendStatus(500)
+        }else{
+            console.log(`Deleted category successfully`)
+            res.sendStatus(200)
+        }
+    })
+})
+
+//Get a list of categories
+app.get('/api/store/categories', (req, res) => {
+    let getCategories = `SELECT * FROM categories`
+    db.all(getCategories, (err, result) => {
+        if(err){
+            console.log(`Couldn't get a list of categories`, err)
+            res.sendStatus(500)
+        }else{
+            console.log(`Get all categories`)
+            res.status(200).json(result)
+        }
+    })
+})
+
+//Update category
+app.put('/api/store/category/:id', (req, res) => {
+    let categoryID = req.params.id
+    let name = req.body.name
+    let updateCategory = `UPDATE categories SET name = ? WHERE oid = ?`
+    db.run(updateCategory, [name, categoryID], err => {
+        if(err){
+            console.log(`Couldn't update category`, err)
+            res.sendStatus(500)
+        }else{
+            console.log(`Updated category successfully`)
+            res.sendStatus(200)
+        }
+    })
+})
+
+//Get a list of all products in the store
+app.get('/api/store/products', (req, res) => {
+    let getAllProducts = "SELECT * FROM products"
+    db.all(getAllProducts, (err, result) => {
+        if(err){
+            console.log(`Somehing happened getting the list of produts`, err)
+            res.sendStatus(500)
+        }
+        res.status(200).json(result)
+    })
+})
+
 //Add new products to the store
-app.post('/api/store', (req, res) => {
+app.post('/api/store/prodcut', (req, res) => {
     let addNewProduct = `INSERT INTO products VALUES (?,?,?,?)`
     let getCategoryID = `SELECT oid FROM categories WHERE name = ?`
     let category = req.body.category
@@ -156,6 +224,51 @@ app.post('/api/store', (req, res) => {
     })
 })
 
+//Update a product 
+app.put('/api/store/product/:id', (req, res) => {
+    let productID = parseInt(req.params.id)
+
+    let queryHelper = Object.keys(req.body).map(ele => `${ele.toUpperCase()} = ?`)
+
+    let queryValues = [...Object.values(req.body), productID]
+
+    let updateProduct = `UPDATE products SET ${queryHelper.join(', ')} WHERE oid = ?`
+
+    
+    db.run(updateProduct, queryValues, err => {
+        if(err){
+            console.log(`Something went wrong updating product with id ${productID}`, err)
+            res.sendStatus(500)
+        }else{
+            console.log(`Update to products with id ${productID} successful`)
+            res.sendStatus(200)
+        }
+    })
+})
+
+//Delete product 
+app.delete('/api/store/product/:id', (req, res) => {
+    let prodcutID = req.params.id
+    let deleteProduct = `DELETE FROM products WHERE oid = ?`
+    let deleteOrderItems = `DELETE FROM order_items WHERE order_items.product_id IN (SELECT oid FROM products WHERE oid = ?)`
+    db.run(deleteOrderItems, [prodcutID], err => {
+        if(err){
+            console.log(`Couldn't remove products from order_items`, err)
+            res.sendStatus(500)
+        }else{
+            db.run(deleteProduct, [prodcutID], err => {
+                if(err){
+                    console.log(`Couldn't remove product`, err)
+                    res.sendStatus(500)
+                }else{
+                    console.log(`Deleted product successfully`)
+                    res.sendStatus(200)
+                }
+            })
+        }
+    })
+})
+
 //Create order to add items to 'Shopping Cart/Pending order'
 app.post('/api/store/customer/:id/order', (req, res) => {
     let customerID = parseInt(req.params.id)
@@ -170,7 +283,56 @@ app.post('/api/store/customer/:id/order', (req, res) => {
     })
 })
 
-//Add items to pending order for customer ID 
+//Update an order 
+app.put('/api/store/order/:id', (req, res) => {
+    let orderID = req.params.id
+    let status = req.body.status
+    let date = null
+    if(status == 'Shipped')
+        date = Date(Date.now())
+    
+    let updateOrderShipped = `UPDATE orders SET status = ?, shipped_date = ? WHERE oid = ?`
+    db.run(updateOrderShipped, [status, date, orderID], err => {
+        if(err){
+            console.log(`Couldn't update order ${orderID} to shipped`)
+            res.sendStatus(500)
+        }else{
+            res.sendStatus(200)
+        }
+    })
+})
+
+//View an order
+app.get('/api/store/order/:id', (req, res) => {
+    let orderID = req.params.id
+    let getOrderInfo = `
+    SELECT
+        orders.status, 
+        orders.order_date, 
+        orders.shipped_date,
+        order_items.quantity,
+        order_items.list_price,
+        products.name
+    FROM 
+        orders 
+    JOIN 
+        order_items on orders.oid = order_items.order_id
+    JOIN 
+        products on products.oid = order_items.oid
+    WHERE 
+        orders.oid = ?`
+    db.all(getOrderInfo, [orderID], (err, result) => {
+        if(err){
+            console.log(`Coulnd't get order information`, err)
+            res.sendStatus(500)
+        }else{
+            console.log(`Getting order data successful`)
+            res.status(200).json(result)
+        }
+    })
+})
+
+//Add items to pending order for customer ID (add order_items)
 app.post('/api/store/order/:o_id/product/:p_id', (req, res) => {
     let orderID = parseInt(req.params.o_id)
     let prodcutID = parseInt(req.params.p_id)
@@ -179,6 +341,7 @@ app.post('/api/store/order/:o_id/product/:p_id', (req, res) => {
     let getStatus = `SELECT status FROM orders WHERE oid = ?`
     let addProductToOrder = `INSERT INTO order_items values (?,?,?,?,?)`
     let getCurrentPrice = `SELECT price FROM products WHERE oid = ?`
+    let adjustQuantity = `UPDATE products SET quantity = ? WHERE oid = ?`
     
     db.get(getStatus, [orderID], (err, result) => {
         if(err){
@@ -193,12 +356,19 @@ app.post('/api/store/order/:o_id/product/:p_id', (req, res) => {
                     console.log(`Couldn't get current price`, err)
                     res.sendStatus(500)
                 }else{
-                    db.run(addProductToOrder, [orderID, prodcutID, quantity, result.price, discount], err => {
+                    db.run(adjustQuantity, [quantity, prodcutID], err => {
                         if(err){
-                            console.log(`Couldn't add product to order`, err)
+                            console.log(`Couldn't update qantity of products`, err)
                             res.sendStatus(500)
                         }else{
-                            res.sendStatus(200)
+                            db.run(addProductToOrder, [orderID, prodcutID, quantity, result.price, discount], err => {
+                                if(err){
+                                    console.log(`Couldn't add product to order`, err)
+                                    res.sendStatus(500)
+                                }else{
+                                    res.sendStatus(200)
+                                }
+                            })
                         }
                     })
                 }
@@ -207,7 +377,7 @@ app.post('/api/store/order/:o_id/product/:p_id', (req, res) => {
     })
 })
 
-//Delete a product from an order 
+//Delete a product from an order (delete order_items)
 app.delete('/api/store/order/:o_id/product/:p_id', (req, res) => {
     let orderID = parseInt(req.params.o_id)
     let prodcutID = parseInt(req.params.p_id)
@@ -233,7 +403,7 @@ app.delete('/api/store/order/:o_id/product/:p_id', (req, res) => {
     })
 })
 
-//Update quantity of product for an order
+//Update quantity of product for an order (update order_items)
 app.put('/api/store/order/:o_id/product/:p_id', (req, res) => {
     let orderID = parseInt(req.params.o_id)
     let prodcutID = parseInt(req.params.p_id)
@@ -249,24 +419,7 @@ app.put('/api/store/order/:o_id/product/:p_id', (req, res) => {
     })
 })
 
-//Update an order to shipped status 
-app.put('/api/store/order/:id', (req, res) => {
-    let orderID = req.params.id
-    let status = req.body.status
-    let date = null
-    if(status == 'Shipped')
-        date = Date(Date.now())
-    
-    let updateOrderShipped = `UPDATE orders SET status = ?, shipped_date = ? WHERE oid = ?`
-    db.run(updateOrderShipped, [date, orderID], err => {
-        if(err){
-            console.log(`Couldn't update order ${orderID} to shipped`)
-            res.sendStatus(500)
-        }else{
-            res.sendStatus(200)
-        }
-    })
-})
+
 
 app.listen(PORT, ()=> {
     console.log(`App listening on port ${PORT}`)
