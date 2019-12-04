@@ -24,6 +24,65 @@ app.get('/api/store', (req, res) => {
     })
 })
 
+//Get customer information
+app.get('/api/store/customer/:id', (req, res) => {
+    let customerID = req.params.id
+    let getCustomerInfo = `SELECT * FROM customers WHERE oid = ?`
+    db.get(getCustomerInfo, [customerID], (err, result) => {
+        if(err){
+            console.log(`Couldn't get customer info`, err)
+            res.sendStatus(500)
+        }else{
+            res.status(200).json(result)
+        }
+    })
+})
+
+//Update a customers information 
+app.put('/api/store/customer/:id', (req,res) => {
+    // get book id from url params (`req.params`)
+    let customerID = parseInt(req.params.id)
+
+    let queryHelper = Object.keys(req.body).map(ele => `${ele.toUpperCase()} = ?`)
+
+    let queryValues = [...Object.values(req.body), customerID]
+
+    let updateCustomer = `UPDATE customers SET ${queryHelper.join(', ')} WHERE oid = ?`
+
+    
+    db.run(updateCustomer, queryValues, err => {
+        if(err){
+            console.log(`Something went wrong updating customer with id ${customerID}`, err)
+            res.sendStatus(500)
+        }else{
+            console.log(`Update to customer with id ${customerID} successful`)
+            res.sendStatus(200)
+        }
+    })
+});
+
+//Add a new customer
+app.post('/api/store/customer', (req, res) => {
+    let customerID = parseInt(req.params.id)
+
+    let queryHelper = Object.keys(req.body)
+    let queryHelper2 = Object.keys(req.body).map(ele => `?`)
+    
+    let queryValues = [...Object.values(req.body)]
+
+    let addNewCustomer = `INSERT INTO customers (${queryHelper.join(', ')}) VALUES (${queryHelper2.join(', ')})`
+    
+    db.run(addNewCustomer, queryValues, err => {
+        if(err){
+            console.log(`Something went wrong adding new customer`, err)
+            res.sendStatus(500)
+        }else{
+            console.log(`Adding new customer successful`)
+            res.sendStatus(200)
+        }
+    })
+})
+
 //Get customers orders 
 app.get('/api/store/customer/:id/orders', (req, res) => {
     let customerID = parseInt(req.params.id)
