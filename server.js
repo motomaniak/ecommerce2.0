@@ -13,14 +13,13 @@ app.get('/', function(req, res){
 
 //Get a list of all products in the store
 app.get('/api/store', (req, res) => {
-    console.log("here")
     let getAllProducts = "SELECT * FROM products"
     db.all(getAllProducts, (err, result) => {
         if(err){
             console.log(`Somehing happened getting the list of produts`, err)
             res.sendStatus(500)
         }
-        res.staus(200).json(result)
+        res.status(200).json(result)
     })
 })
 
