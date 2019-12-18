@@ -5,6 +5,13 @@ const PORT = 9000
 
 let app = express()
 
+app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*")
+    res.setHeader('Access-Control-Allow-Methods', '*')
+	res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+    next()
+})
+
 app.use(express.json())
 
 app.get('/', function(req, res){
@@ -33,9 +40,9 @@ app.put('/api/store/customer/:id', (req,res) => {
 
     let queryValues = [...Object.values(req.body), customerID]
 
-    let updateCustomer = `UPDATE customers SET ${queryHelper.join(', ')} WHERE oid = ?`
+    let updateCustomer = `UPDATE customers SET ${queryHelper.join(', ')} WHERE customer_id = ?`
 
-    
+    console.log(updateCustomer)
     db.run(updateCustomer, queryValues, err => {
         if(err){
             console.log(`Something went wrong updating customer with id ${customerID}`, err)
@@ -50,33 +57,47 @@ app.put('/api/store/customer/:id', (req,res) => {
 //Delete customer and all associated information so there isn't any orphan data
 app.delete('/api/store/customer/:id', (req, res) => {
     let customerID = req.params.id
-    let deleteOrderItems = `DELETE FROM order_items WHERE order_id IN (SELECT orders.oid FROM orders JOIN customers ON orders.customer_id = customers.oid WHERE customers.oid = ?)`
-    let deleteOrders = `DELETE FROM orders WHERE orders.customer_id IN (SELECT orders.customer_id FROM orders JOIN customers ON orders.customer_id = customers.oid WHERE customers.oid = ?)`
-    let deleteCustomer = `DELETE FROM customers WHERE oid = ?`
-    db.run(deleteOrderItems, [customerID], err => {
+    let deleteCustomer = `DELETE FROM customers WHERE customer_id = ?`
+    db.run(deleteCustomer, [customerID], err => {
         if(err){
-            console.log(`Couldn't delete customers order items`, err)
+            console.log(`Couldn't delete customer from database`, err)
             res.sendStatus(500)
         }else{
-            db.run(deleteOrders, [customerID], err => {
-                if(err){
-                    console.log(`Couldn't delete customers orders`, err)
-                    res.sendStatus(500)
-                }else{
-                    db.run(deleteCustomer, [customerID], err => {
-                        if(err){
-                            console.log(`Couldn't delete customer`, err)
-                            res.sendStatus(500)
-                        }else{
-                            console.log(`Deleting customer and all information successful`)
-                            res.sendStatus(200)
-                        }
-                    })
-                }
-            })
+            console.log('Deleted customer successful')
+            res.sendStatus(200)
         }
-    }) 
+    })
 })
+
+// app.delete('/api/store/customer/:id', (req, res) => {
+//     let customerID = req.params.id
+//     let deleteOrderItems = `DELETE FROM order_items WHERE order_id IN (SELECT orders.oid FROM orders JOIN customers ON orders.customer_id = customers.oid WHERE customers.oid = ?)`
+//     let deleteOrders = `DELETE FROM orders WHERE orders.customer_id IN (SELECT orders.customer_id FROM orders JOIN customers ON orders.customer_id = customers.oid WHERE customers.oid = ?)`
+//     let deleteCustomer = `DELETE FROM customers WHERE oid = ?`
+//     db.run(deleteOrderItems, [customerID], err => {
+//         if(err){
+//             console.log(`Couldn't delete customers order items`, err)
+//             res.sendStatus(500)
+//         }else{
+//             db.run(deleteOrders, [customerID], err => {
+//                 if(err){
+//                     console.log(`Couldn't delete customers orders`, err)
+//                     res.sendStatus(500)
+//                 }else{
+//                     db.run(deleteCustomer, [customerID], err => {
+//                         if(err){
+//                             console.log(`Couldn't delete customer`, err)
+//                             res.sendStatus(500)
+//                         }else{
+//                             console.log(`Deleting customer and all information successful`)
+//                             res.sendStatus(200)
+//                         }
+//                     })
+//                 }
+//             })
+//         }
+//     }) 
+// })
 
 //Add a new customer
 app.post('/api/store/customer', (req, res) => {
@@ -88,7 +109,7 @@ app.post('/api/store/customer', (req, res) => {
     let queryValues = [...Object.values(req.body)]
 
     let addNewCustomer = `INSERT INTO customers (${queryHelper.join(', ')}) VALUES (${queryHelper2.join(', ')})`
-    
+    console.log(addNewCustomer)
     db.run(addNewCustomer, queryValues, err => {
         if(err){
             console.log(`Something went wrong adding new customer`, err)
@@ -196,12 +217,27 @@ app.get('/api/store/products', (req, res) => {
     })
 })
 
+app.get('/api/store/product/:id', (req, res) => {
+    let getProduct = `SELECT * FROM products WHERE product_id = ?`
+    let prodcutID = req.params.id
+    db.get(getProduct, [prodcutID], (err, result) => {
+        if(err){
+            console.log(`Couldn't get product with id: ${productID}`, err)
+            res.sendStatus(500)
+        }else{
+            res.status(200).json(result)
+        }
+    })
+})
+
 //Add new products to the store
 app.post('/api/store/prodcut', (req, res) => {
-    let addNewProduct = `INSERT INTO products VALUES (?,?,?,?)`
-    let getCategoryID = `SELECT oid FROM categories WHERE name = ?`
+    let addNewProduct = `INSERT INTO products VALUES (?,?,?,?,?,?)`
+    let getCategoryID = `SELECT category_id FROM categories WHERE name = ?`
     let category = req.body.category
     let name = req.body.name
+    let description = req.body.description
+    let image = req.body.image
     let quantity = parseInt(req.body.quantity)
     let price = parseFloat(req.body.price)
 
@@ -210,8 +246,7 @@ app.post('/api/store/prodcut', (req, res) => {
             console.log(`Couldn't get category ID for ${category}`)
             res.sendStatus(500)
         }else{
-            console.log(result.rowid + " " + price + " " + name)
-            db.run(addNewProduct, [name, quantity, result.rowid, price], err => {
+            db.run(addNewProduct, [name, description, image, quantity, result.category_id, price], err => {
                 if(err){
                     console.log(`Couldn't add ${name} to database`, err)
                     res.sendStatus(500)

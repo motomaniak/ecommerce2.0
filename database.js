@@ -3,44 +3,67 @@ let db = new sqlite3.Database('./ecommerce.db')
 
 let createCustomersTable = `CREATE TABLE IF NOT EXISTS 
     customers(
-        first_name text, 
-        last_name text, 
-        email text NOT NULL UNIQUE, 
-        address text, 
-        city text, 
-        state text, 
-        zip integer, 
-        phone integer
+        customer_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        first_name TEXT, 
+        last_name TEXT, 
+        email TEXT NOT NULL UNIQUE, 
+        address TEXT, 
+        city TEXT, 
+        state TEXT, 
+        zip INTEGER, 
+        phone INTEGER
     )`
 let createCategoriesTable = `CREATE TABLE IF NOT EXISTS 
     categories (
-        name text
+        category_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        name TEXT
     )`
 let createProductsTable = `CREATE TABLE IF NOT EXISTS 
     products (
-        name text, 
-        quantity integer, 
-        category_id integer NOT NULL, 
-        price real
+        product_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        description TEXT,
+        image TEXT,
+        quantity INTEGER, 
+        category_id INTEGER NOT NULL, 
+        price REAL,
+        FOREIGN KEY (category_id) REFERENCES categories (category_id)
     )`
+let createProductsImagesTable = `CREATE TABLE IF NOT EXISTS 
+    product_images (
+        product_image_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        image TEXT,
+        FOREIGN KEY (product_id) REFERENCES prodcuts (product_id)
+            ON DELETE CASCADE ON UPDATE NO ACTION
+    )
+`
 let createOrdersTable = `CREATE TABLE IF NOT EXISTS 
     orders (
-        customer_id integer,
-        status text,
-        order_date text,
-        shipped_date text
+        order_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        customer_id INTEGER NOT NULL,
+        status TEXT,
+        order_date TEXT,
+        shipped_date TEXT,
+        FOREIGN KEY (customer_id) REFERENCES customers (customer_id)
+            ON DELETE CASCADE ON UPDATE NO ACTION
     )`
 let createOrdersItemsTable = `CREATE TABLE IF NOT EXISTS 
     order_items (
-        product_id integer NOT NULL, 
-        order_id integer NOT NULL,
-        quantity integer,
-        list_price real, 
-        discount real
-            CHECK (0 <= discount <= 1)
+        product_id INTEGER NOT NULL, 
+        order_id INTEGER NOT NULL,
+        quantity INTEGER,
+        list_price REAL, 
+        discount REAL
+            CHECK (0 <= discount <= 1),
+        PRIMARY KEY (product_id, order_id)
+        FOREIGN KEY (product_id) REFERENCES products (product_id)
+            ON DELETE CASCADE ON UPDATE NO ACTION,
+        FOREIGN KEY (order_id) REFERENCES orders (order_id)
+            ON DELETE CASCADE ON UPDATE NO ACTION
     )`
     
-;[createCustomersTable, createCategoriesTable, createProductsTable, createOrdersTable, createOrdersItemsTable].forEach(table => {
+;[createCustomersTable, createProductsImagesTable, createCategoriesTable, createProductsTable, createOrdersTable, createOrdersItemsTable].forEach(table => {
     db.run(table, err => {
         if(err)
             console.log(`Create table failed`, err)
