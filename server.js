@@ -72,14 +72,14 @@ app.delete('/api/store/customer/:id', (req, res) => {
 
 //Add a new customer
 app.post('/api/store/customer', (req, res) => {
-    console.log(req.body)
+    
     let queryHelper = Object.keys(req.body)
     let queryHelper2 = Object.keys(req.body).map(ele => `?`)
     
     let queryValues = [...Object.values(req.body)]
 
     let addNewCustomer = `INSERT INTO customers (${queryHelper.join(', ')}) VALUES (${queryHelper2.join(', ')})`
-    console.log(addNewCustomer)
+
     db.run(addNewCustomer, queryValues, err => {
         if(err){
             console.log(`Something went wrong adding new customer`, err)
