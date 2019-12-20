@@ -72,8 +72,7 @@ app.delete('/api/store/customer/:id', (req, res) => {
 
 //Add a new customer
 app.post('/api/store/customer', (req, res) => {
-    let customerID = parseInt(req.params.id)
-
+    console.log(req.body)
     let queryHelper = Object.keys(req.body)
     let queryHelper2 = Object.keys(req.body).map(ele => `?`)
     
@@ -154,7 +153,6 @@ app.get('/api/store/categories', (req, res) => {
             console.log(`Couldn't get a list of categories`, err)
             res.sendStatus(500)
         }else{
-            console.log(`Get all categories`)
             res.status(200).json(result)
         }
     })
@@ -198,7 +196,8 @@ app.get('/api/store/product/:id', (req, res) => {
         image, 
         quantity, 
         price, 
-        categories.name as category_name 
+        categories.name as category_name, 
+        categories.category_id
     FROM
         products 
     JOIN 
@@ -207,7 +206,7 @@ app.get('/api/store/product/:id', (req, res) => {
         (category_id)
     WHERE
         products.product_id = ?`
-    console.log(req.params)
+    
     let productId = req.params.id
     db.get(getProduct, [productId], (err, result) => {
         if(err){
@@ -223,28 +222,20 @@ app.get('/api/store/product/:id', (req, res) => {
 app.post('/api/store/product', (req, res) => {
 
     let addNewProduct = `INSERT INTO products (name, description, image, quantity, category_id, price) VALUES (?,?,?,?,?,?)`
-    let getCategoryID = `SELECT category_id FROM categories WHERE name = ?`
-    let category = req.body.category
+    let category_id = req.body.category_id
     let name = req.body.name
     let description = req.body.description
     let image = req.body.image
     let quantity = parseInt(req.body.quantity)
     let price = parseFloat(req.body.price)
 
-    db.get(getCategoryID, [category], (err, result) => {
+    db.run(addNewProduct, [name, description, image, quantity, category_id, price], err => {
         if(err){
-            console.log(`Couldn't get category ID for ${category}`)
+            console.log(`Couldn't add ${name} to database`, err)
             res.sendStatus(500)
         }else{
-            db.run(addNewProduct, [name, description, image, quantity, result.category_id, price], err => {
-                if(err){
-                    console.log(`Couldn't add ${name} to database`, err)
-                    res.sendStatus(500)
-                }else{
-                    console.log(`Added ${name} to the database`)
-                    res.sendStatus(200)
-                }
-            })
+            console.log(`Added ${name} to the database`)
+            res.sendStatus(200)
         }
     })
 })
@@ -259,7 +250,8 @@ app.put('/api/store/product/:id', (req, res) => {
 
     let updateProduct = `UPDATE products SET ${queryHelper.join(', ')} WHERE oid = ?`
 
-    
+    console.log(updateProduct)
+    console.log(queryValues)
     db.run(updateProduct, queryValues, err => {
         if(err){
             console.log(`Something went wrong updating product with id ${productID}`, err)
