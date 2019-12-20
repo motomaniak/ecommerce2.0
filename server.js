@@ -250,8 +250,6 @@ app.put('/api/store/product/:id', (req, res) => {
 
     let updateProduct = `UPDATE products SET ${queryHelper.join(', ')} WHERE oid = ?`
 
-    console.log(updateProduct)
-    console.log(queryValues)
     db.run(updateProduct, queryValues, err => {
         if(err){
             console.log(`Something went wrong updating product with id ${productID}`, err)
