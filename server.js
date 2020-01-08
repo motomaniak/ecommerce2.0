@@ -1,5 +1,9 @@
 let express = require('express')
 let db = require('./database')
+let routes = require('./routes');
+let jwt = require('jsonwebtoken')
+let cors = require('cors')
+let bodyParser = require('body-parser')
 
 const PORT = 9000
 
@@ -13,29 +17,58 @@ app.use((req, res, next) => {
     next()  
 })
 
-app.use(express.json())
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+
+let corsOptions = {
+    origin: ['http://localhost:9000'],
+    credentials: true,
+    optionsSuccessStatus: 200
+}
+
+app.use(cors(corsOptions))
 
 app.get('/', function(req, res){
     res.send(`Visit /api/store to see a list of products available`)
 })
 
+app.use('/api/ecommerce/auth', routes.auth)
+
+
+let authorize = (req) => {
+    let bearerHeader = req.headers['authorization']
+    let customerID = null
+    if(typeof bearerHeader !== undefined){
+        let bearer = bearerHeader.split(" ")
+        let bearerToken = bearer[1]
+        req.token = bearerToken
+        let verified = jwt.verify(req.token, "ecommercesite")
+        customerID = verified.customer_id
+    }
+    return customerID
+}
+
+
 //Get customer information
-app.get('/api/store/customer/:id', (req, res) => {
-    let customerID = req.params.id
+app.get('/api/store/customer', (req, res) => {
+    let customerID = authorize(req)
     let getCustomerInfo = `SELECT * FROM customers WHERE oid = ?`
     db.get(getCustomerInfo, [customerID], (err, result) => {
         if(err){
             console.log(`Couldn't get customer info`, err)
             res.sendStatus(500)
         }else{
+            console.log(result)
             res.status(200).json(result)
         }
     })
 })
 
 //Update a customers information 
-app.put('/api/store/customer/:id', (req,res) => {
-    let customerID = parseInt(req.params.id)
+app.put('/api/store/customer/', (req,res) => {
+    console.log(req.body)
+    let customerID = authorize(req)
 
     let queryHelper = Object.keys(req.body).map(ele => `${ele.toUpperCase()} = ?`)
 
@@ -44,15 +77,15 @@ app.put('/api/store/customer/:id', (req,res) => {
     let updateCustomer = `UPDATE customers SET ${queryHelper.join(', ')} WHERE customer_id = ?`
 
     console.log(updateCustomer)
-    db.run(updateCustomer, queryValues, err => {
-        if(err){
-            console.log(`Something went wrong updating customer with id ${customerID}`, err)
-            res.sendStatus(500)
-        }else{
-            console.log(`Update to customer with id ${customerID} successful`)
-            res.sendStatus(200)
-        }
-    })
+    // db.run(updateCustomer, queryValues, err => {
+    //     if(err){
+    //         console.log(`Something went wrong updating customer with id ${customerID}`, err)
+    //         res.sendStatus(500)
+    //     }else{
+    //         console.log(`Update to customer with id ${customerID} successful`)
+    //         res.sendStatus(200)
+    //     }
+    // })
 });
 
 //Delete customer and all associated information so there isn't any orphan data
