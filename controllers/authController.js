@@ -77,7 +77,7 @@ let login = (req, res) => {
             if(err){
                 return res.status(500).json({status:500, message:"Username or password incorrect. Please try again.", err: err})
             }
-            console.log(isMatch)
+            
             if(isMatch){
                 let user = {
                     customer_id: result.customer_id

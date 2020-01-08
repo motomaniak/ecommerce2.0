@@ -67,7 +67,6 @@ app.get('/api/store/customer', (req, res) => {
 
 //Update a customers information 
 app.put('/api/store/customer/', (req,res) => {
-    console.log(req.body)
     let customerID = authorize(req)
 
     let queryHelper = Object.keys(req.body).map(ele => `${ele.toUpperCase()} = ?`)
@@ -76,21 +75,20 @@ app.put('/api/store/customer/', (req,res) => {
 
     let updateCustomer = `UPDATE customers SET ${queryHelper.join(', ')} WHERE customer_id = ?`
 
-    console.log(updateCustomer)
-    // db.run(updateCustomer, queryValues, err => {
-    //     if(err){
-    //         console.log(`Something went wrong updating customer with id ${customerID}`, err)
-    //         res.sendStatus(500)
-    //     }else{
-    //         console.log(`Update to customer with id ${customerID} successful`)
-    //         res.sendStatus(200)
-    //     }
-    // })
+    db.run(updateCustomer, queryValues, err => {
+        if(err){
+            console.log(`Something went wrong updating customer with id ${customerID}`, err)
+            res.sendStatus(500)
+        }else{
+            console.log(`Update to customer with id ${customerID} successful`)
+            res.sendStatus(200)
+        }
+    })
 });
 
 //Delete customer and all associated information so there isn't any orphan data
-app.delete('/api/store/customer/:id', (req, res) => {
-    let customerID = req.params.id
+app.delete('/api/store/customer/', (req, res) => {
+    let customerID = authorize(req)
     let deleteCustomer = `DELETE FROM customers WHERE customer_id = ?`
     db.run(deleteCustomer, [customerID], err => {
         if(err){
