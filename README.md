@@ -1,5 +1,13 @@
 # ECommerce Store
 
+## Other Links to repos
+React Front end:
+https://github.com/motomaniak/ecommerce2.0-frontend
+Python Backend Version:
+https://github.com/motomaniak/ecommerce-python
+Vue Frontend Version:
+https://github.com/motomaniak/ecommerce-vue
+
 ## Table Of Contents
 1. GET '/api/store/customer/:id'
 2. PUT '/api/store/customer/:id'
